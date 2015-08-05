@@ -29,7 +29,7 @@ import java.util.Locale;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.lang.Runnable;
-
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -43,6 +43,7 @@ import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.WindowManager;
 
+@SuppressLint("DefaultLocale")
 public class Cocos2dxHelper {
     // ===========================================================
     // Constants
@@ -308,7 +309,11 @@ public class Cocos2dxHelper {
 
     public static void setEditTextDialogResult(final String pResult) {
         try {
-            final byte[] bytesUTF8 = pResult.getBytes("UTF8");
+        	String text = emojiConversionString(pResult);
+        	if (null == text || 0 == text.length()) {
+        		return;
+        	}
+        	final byte[] bytesUTF8 = text.getBytes("UTF8");
 
             Cocos2dxHelper.sCocos2dxHelperListener.runOnGLThread(new Runnable() {
                 @Override
@@ -320,6 +325,43 @@ public class Cocos2dxHelper {
             /* Nothing. */
         }
     }
+    
+	private static String emojiConversionString(String source) {
+		int len = source.length();
+		String target = "";
+		for (int i = 0; i < len; i++) {
+			char hs = source.charAt(i);
+			if (i < len - 1 && 0xd800 <= hs && hs <= 0xdbff) {
+				char ls = source.charAt(i+1);
+				int uc = ((hs - 0xd800) * 0x400) + (ls - 0xdc00) + 0x10000;
+				if (0x1d000 <= uc && uc <= 0x1f77f) {
+					String emoji = Integer.toHexString(uc).toUpperCase();
+					target = target + "("+emoji+")";
+					++i;
+				}
+			} else {
+	            if (0x2100 <= hs && hs <= 0x27ff) {
+					String emoji = Integer.toHexString(hs).toUpperCase();
+					target = target + "("+emoji+")";
+	            } else if (0x2B05 <= hs && hs <= 0x2b07) {
+					String emoji = Integer.toHexString(hs).toUpperCase();
+					target = target + "("+emoji+")";
+	            } else if (0x2934 <= hs && hs <= 0x2935) {
+					String emoji = Integer.toHexString(hs).toUpperCase();
+					target = target + "("+emoji+")";
+	            } else if (0x3297 <= hs && hs <= 0x3299) {
+					String emoji = Integer.toHexString(hs).toUpperCase();
+					target = target + "("+emoji+")";
+	            } else if (hs == 0xa9 || hs == 0xae || hs == 0x303d || hs == 0x3030 || hs == 0x2b55 || hs == 0x2b1c || hs == 0x2b1b || hs == 0x2b50) {
+					String emoji = Integer.toHexString(hs).toUpperCase();
+					target = target + "("+emoji+")";
+	            } else {
+	            	target = target + hs;
+	            }
+			}
+		}
+		return target;
+	}
 
     public static int getDPI()
     {
