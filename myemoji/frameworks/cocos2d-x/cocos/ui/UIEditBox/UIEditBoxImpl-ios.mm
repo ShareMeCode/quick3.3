@@ -28,6 +28,7 @@
 
 #define kLabelZOrder  9999
 
+#include <sstream>
 #include "UIEditBox.h"
 #include "base/CCDirector.h"
 #include "2d/CCLabel.h"
@@ -224,6 +225,17 @@ static const int CC_EDIT_BOX_PADDING = 5;
 {
     if (getEditBoxImplIOS()->getMaxLength() < 0)
     {
+        auto emojiString = [self stringContainsEmoji:string];
+        if (emojiString != "")
+        {
+            NSString* emojiSS = [NSString stringWithCString:emojiString.c_str() encoding:[NSString defaultCStringEncoding]];
+            NSMutableString* strrr = [NSMutableString stringWithString:getEditBoxImplIOS()->_systemControl.textField.text];
+            [strrr appendString:@"("];
+            [strrr appendString:emojiSS];
+            [strrr appendString:@")"];
+            getEditBoxImplIOS()->_systemControl.textField.text = strrr;
+            return NO;
+        }
         return YES;
     }
     
@@ -233,7 +245,61 @@ static const int CC_EDIT_BOX_PADDING = 5;
     
     NSUInteger newLength = oldLength - rangeLength + replacementLength;
     
+    auto emojiString = [self stringContainsEmoji:string];
+    if (emojiString != "")
+    {
+        NSString* emojiSS = [NSString stringWithCString:emojiString.c_str() encoding:[NSString defaultCStringEncoding]];
+        if (newLength + emojiSS.length + 2 <= getEditBoxImplIOS()->getMaxLength()) {
+            NSMutableString* strrr = [NSMutableString stringWithString:getEditBoxImplIOS()->_systemControl.textField.text];
+            [strrr appendString:@"("];
+            [strrr appendString:emojiSS];
+            [strrr appendString:@")"];
+            getEditBoxImplIOS()->_systemControl.textField.text = strrr;
+            return NO;
+        }
+        return NO;
+    }
     return newLength <= getEditBoxImplIOS()->getMaxLength();
+}
+
+- (std::string)stringContainsEmoji:(NSString *)string {
+    __block BOOL returnValue = NO;
+    __block int num;
+    [string enumerateSubstringsInRange:NSMakeRange(0, [string length]) options:NSStringEnumerationByComposedCharacterSequences usingBlock:
+     ^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+         const unichar hs = [substring characterAtIndex:0];
+         num = hs;
+         // surrogate pair
+         if (0xd800 <= hs && hs <= 0xdbff) {
+             if (substring.length > 1) {
+                 const unichar ls = [substring characterAtIndex:1];
+                 const int uc = ((hs - 0xd800) * 0x400) + (ls - 0xdc00) + 0x10000;
+                 if (0x1d000 <= uc && uc <= 0x1f77f) {
+                     returnValue = YES;
+                     num = uc;
+                 }
+             }
+         } else {
+             // non surrogate
+             if (0x2100 <= hs && hs <= 0x27ff) {
+                 returnValue = YES;
+             } else if (0x2B05 <= hs && hs <= 0x2b07) {
+                 returnValue = YES;
+             } else if (0x2934 <= hs && hs <= 0x2935) {
+                 returnValue = YES;
+             } else if (0x3297 <= hs && hs <= 0x3299) {
+                 returnValue = YES;
+             } else if (hs == 0xa9 || hs == 0xae || hs == 0x303d || hs == 0x3030 || hs == 0x2b55 || hs == 0x2b1c || hs == 0x2b1b || hs == 0x2b50) {
+                 returnValue = YES;
+             }
+         }
+     }];
+    if (returnValue) {
+        std::stringstream ss;
+        ss<<std::hex<<std::uppercase<<num;
+        return ss.str();
+    }
+    return "";
 }
 
 /**
