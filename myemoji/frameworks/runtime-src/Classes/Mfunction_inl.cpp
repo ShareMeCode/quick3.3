@@ -8,6 +8,8 @@ const std::string emoji_end_str = ")";
 std::vector<emojiString> emojiString::split_emoji(const std::string& str)
 {
     std::vector<emojiString> e_s;
+    if (str == "")
+	return e_s;
     size_t startPos = 0;
     size_t endPos = 0;
     // 第一个起始字符
@@ -57,8 +59,11 @@ std::vector<emojiString> emojiString::split_emoji(const std::string& str)
         e_s.push_back(emojiString(str, false));
     }
     // str中 有 符合要求的字符串，若末尾还有多余字符串，将其加入非符合要求的字符中
-    if (startPos != std::string::npos && endPos != std::string::npos && endPos < str.size()-1) {
-        e_s.push_back(emojiString(str.substr(endPos+1), false));
+    if (startPos != std::string::npos && endPos != std::string::npos) {
+	if ( endPos < str.size()-1 && endPos != 0)
+        	e_s.push_back(emojiString(str.substr(endPos+1), false));
+	else if (endPos == 0)
+        	e_s.push_back(emojiString(str.substr(endPos), false));
     }
     
     return e_s;
